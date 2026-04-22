@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
@@ -9,6 +9,11 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  themeColor: "#0d0d0d",
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://holding-ai.example"),
@@ -47,8 +52,10 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-[#0d0d0d] text-zinc-100">
         <SiteHeader />
-        <div className="pb-24">{children}</div>
-        <SiteFooter />
+        <div className="pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))]">
+          {children}
+          <SiteFooter />
+        </div>
         <GlobalInputBar />
       </body>
     </html>
