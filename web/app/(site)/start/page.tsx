@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useRef, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createProjectFromForm } from "@/lib/site-session";
 
-type Stage = "form" | "loading" | "success";
+type Stage = "form" | "loading";
 
 const loadingSteps = [
   "Анализ конкурентов",
@@ -22,6 +22,7 @@ export default function StartPage() {
 }
 
 function StartPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const presetBusiness = searchParams.get("business") ?? "";
   const [stage, setStage] = useState<Stage>("form");
@@ -30,32 +31,66 @@ function StartPageInner() {
   const [niche, setNiche] = useState(presetBusiness);
   const [geo, setGeo] = useState("");
   const [contact, setContact] = useState("");
+  const tickRef = useRef<number | undefined>(undefined);
+  const stepRef = useRef<number | undefined>(undefined);
 
-  const siteUrl = useMemo(() => {
-    const slug = niche ? niche.toLowerCase().replace(/\s+/g, "-") : "demo-site";
-    return `https://demo.ai-site-engine.app/${slug}`;
-  }, [niche]);
+  useEffect(() => {
+    return () => {
+      if (tickRef.current != null) {
+        window.clearInterval(tickRef.current);
+      }
+      if (stepRef.current != null) {
+        window.clearInterval(stepRef.current);
+      }
+    };
+  }, []);
 
   const startGeneration = () => {
     setStage("loading");
     setSecondsLeft(60);
     setActiveStep(0);
 
-    const timer = window.setInterval(() => {
+    if (tickRef.current != null) {
+      window.clearInterval(tickRef.current);
+    }
+    if (stepRef.current != null) {
+      window.clearInterval(stepRef.current);
+    }
+
+    const nicheTrim = niche.trim();
+    const geoTrim = geo.trim();
+    const contactTrim = contact.trim();
+
+    tickRef.current = window.setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
-          window.clearInterval(timer);
-          setStage("success");
+          if (tickRef.current != null) {
+            window.clearInterval(tickRef.current);
+            tickRef.current = undefined;
+          }
+          if (stepRef.current != null) {
+            window.clearInterval(stepRef.current);
+            stepRef.current = undefined;
+          }
+          const slug = createProjectFromForm({
+            niche: nicheTrim,
+            city: geoTrim,
+            contact: contactTrim,
+          });
+          router.replace(`/preview/${slug}`);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    const stepTimer = window.setInterval(() => {
+    stepRef.current = window.setInterval(() => {
       setActiveStep((prev) => {
         if (prev >= loadingSteps.length - 1) {
-          window.clearInterval(stepTimer);
+          if (stepRef.current != null) {
+            window.clearInterval(stepRef.current);
+            stepRef.current = undefined;
+          }
           return prev;
         }
         return prev + 1;
@@ -139,32 +174,6 @@ function StartPageInner() {
         </section>
       )}
 
-      {stage === "success" && (
-        <section className="surface-card mx-auto max-w-2xl p-8 md:p-10">
-          <p className="eyebrow">Готово</p>
-          <h2 className="mt-4 text-4xl font-light text-white">Сайт создан</h2>
-          <p className="mt-3 text-zinc-300">Ваш демо-адрес:</p>
-          <p className="mt-2 rounded-lg border border-white/10 bg-[#101010] px-4 py-3 text-sm text-zinc-200">
-            {siteUrl}
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <a
-              href={siteUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border border-white/18 bg-white/8 px-5 py-3 font-medium text-white transition hover:bg-white/14"
-            >
-              Открыть сайт
-            </a>
-            <Link
-              href="/dashboard"
-              className="rounded-xl border border-white/15 px-5 py-3 text-zinc-200"
-            >
-              Открыть dashboard
-            </Link>
-          </div>
-        </section>
-      )}
     </main>
   );
 }

@@ -1,9 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { SiteHeader } from "@/components/site-header";
-import { GlobalInputBar } from "@/components/global-input-bar";
-import { SiteFooter } from "@/components/site-footer";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -51,12 +48,7 @@ export default function RootLayout({
       className={`${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-[#0d0d0d] text-zinc-100">
-        <SiteHeader />
-        <div className="pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))]">
-          {children}
-          <SiteFooter />
-        </div>
-        <GlobalInputBar />
+        {children}
       </body>
     </html>
   );
