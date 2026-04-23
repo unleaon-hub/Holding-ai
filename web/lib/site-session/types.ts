@@ -3,10 +3,41 @@
  * TODO: заменить localStorage на ответы API (GET/PATCH /projects, POST /auth/claim).
  */
 
+/** Порядок секций на странице (детерминированно от seed). */
+export type SoloLayoutId = "A" | "B" | "C";
+
+export type SoloSectionKind =
+  | "benefits"
+  | "services"
+  | "how"
+  | "reviews"
+  | "trust"
+  | "final_cta";
+
+/** Визуальный формат секции в превью (rule-based). */
+export type SoloSectionVariant = "cards" | "list" | "steps" | "accent";
+
+export type SoloSection = {
+  kind: SoloSectionKind;
+  variant: SoloSectionVariant;
+};
+
 /**
  * Секции тела SOLO-лендинга (rule-based). Необязательно: старые сессии / флаг off → fallback в превью.
+ * `layoutId` + `sections` — новая схема; поля why/services/trust сохраняют совместимость с редактором.
  */
 export type SoloBodyBlocks = {
+  /** Сценарий порядка секций (A/B/C). Старые сессии без поля — превью в legacy-порядке. */
+  layoutId?: SoloLayoutId;
+  /** Упорядоченный список секций с вариантом отображения. */
+  sections?: SoloSection[];
+  /** «Как работаем» — три коротких шага. */
+  howTitle?: string;
+  howItems?: string[];
+  /** Короткие отзывы (без перегруза). */
+  reviewsTitle?: string;
+  reviewItems?: string[];
+
   whyTitle: string;
   whyItems: string[];
   servicesTitle: string;

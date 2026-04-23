@@ -10,7 +10,7 @@ import {
 
 /**
  * Сборка `EditableContent` (опционально `soloBlocks`). Hero — `hero-variants`;
- * тело лендинга (преимущества, услуги, доверие, финальный CTA) — `body-variants`.
+ * тело лендинга (порядок секций `layoutId` + `sections`, тексты блоков) — `body-variants`.
  */
 export function composeSoloContent(args: {
   niche: string;

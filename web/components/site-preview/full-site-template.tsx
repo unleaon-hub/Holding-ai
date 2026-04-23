@@ -1,6 +1,7 @@
-import type { EditableContent, SoloBodyBlocks } from "@/lib/site-session";
+import type { EditableContent, SoloBodyBlocks, SoloSection, SoloSectionVariant } from "@/lib/site-session";
 import { getLegacyFallbackSoloBodyBlocks, SOLO_SITE_GENERATOR_ENABLED } from "@/lib/solo-site";
 import { cn } from "@/lib/utils";
+import { Fragment, type ReactNode } from "react";
 import { PreviewCaptureForm } from "./preview-capture-form";
 import type { LeadFormSection } from "@/lib/lead-storage";
 
@@ -13,15 +14,25 @@ type FullSiteTemplateProps = {
   className?: string;
 };
 
+function safeItems(items: unknown): string[] {
+  return Array.isArray(items)
+    ? items.filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    : [];
+}
+
 function ItemGrid({ title, items }: { title: string; items: string[] }) {
+  const list = safeItems(items);
   return (
     <div className="border-t border-white/6 py-12 md:py-16">
       <div className="mx-auto max-w-5xl px-5 md:px-8">
-        <h2 className="text-lg font-medium tracking-tight text-white md:text-xl">{title}</h2>
+        <h2 className="text-lg font-medium tracking-tight text-white md:text-xl">{title || "—"}</h2>
         <div
-          className={cn("mt-6 grid gap-4", items.length <= 2 ? "md:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3")}
+          className={cn(
+            "mt-6 grid gap-4",
+            list.length <= 2 ? "md:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3",
+          )}
         >
-          {items.map((text, i) => (
+          {list.map((text, i) => (
             <div key={`${i}-${text.slice(0, 32)}`} className="surface-subtle rounded-2xl p-5">
               <p className="text-sm leading-relaxed text-zinc-500">{text}</p>
             </div>
@@ -30,6 +41,151 @@ function ItemGrid({ title, items }: { title: string; items: string[] }) {
       </div>
     </div>
   );
+}
+
+function ItemList({ title, items }: { title: string; items: string[] }) {
+  const list = safeItems(items);
+  return (
+    <div className="border-t border-white/6 py-12 md:py-16">
+      <div className="mx-auto max-w-3xl px-5 md:px-8">
+        <h2 className="text-lg font-medium tracking-tight text-white md:text-xl">{title || "—"}</h2>
+        <ul className="mt-6 space-y-4">
+          {list.map((text, i) => (
+            <li key={`${i}-${text.slice(0, 24)}`} className="flex gap-3 text-sm leading-relaxed text-zinc-400">
+              <span className="mt-0.5 shrink-0 font-medium text-zinc-600">—</span>
+              <span>{text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function StepsSection({ title, items }: { title: string; items: string[] }) {
+  const list = safeItems(items).slice(0, 3);
+  return (
+    <div className="border-t border-white/6 bg-white/[0.02] py-12 md:py-16">
+      <div className="mx-auto max-w-5xl px-5 md:px-8">
+        <h2 className="text-lg font-medium tracking-tight text-white md:text-xl">{title || "—"}</h2>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {list.map((text, i) => (
+            <div key={`${i}-${text.slice(0, 24)}`} className="surface-subtle rounded-2xl p-5">
+              <p className="text-xs font-medium tracking-wider text-zinc-600">ШАГ {i + 1}</p>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewsBlock({ title, items, variant }: { title: string; items: string[]; variant: SoloSectionVariant }) {
+  const list = safeItems(items);
+  if (variant === "list") {
+    return (
+      <div className="border-t border-white/6 py-12 md:py-16">
+        <div className="mx-auto max-w-3xl px-5 md:px-8">
+          <h2 className="text-lg font-medium tracking-tight text-white md:text-xl">{title || "—"}</h2>
+          <ul className="mt-6 space-y-5">
+            {list.map((text, i) => (
+              <li key={`${i}-${text.slice(0, 24)}`} className="text-sm leading-relaxed text-zinc-400">
+                <span className="text-zinc-600">«</span>
+                {text}
+                <span className="text-zinc-600">»</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="border-t border-white/6 py-12 md:py-16">
+      <div className="mx-auto max-w-5xl px-5 md:px-8">
+        <h2 className="text-lg font-medium tracking-tight text-white md:text-xl">{title || "—"}</h2>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {list.map((text, i) => (
+            <div key={`${i}-${text.slice(0, 24)}`} className="surface-subtle rounded-2xl p-5">
+              <p className="text-sm leading-relaxed text-zinc-500">
+                <span className="text-zinc-600">«</span>
+                {text}
+                <span className="text-zinc-600">»</span>
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrustBlock({
+  title,
+  items,
+  variant,
+}: {
+  title: string;
+  items: string[];
+  variant: SoloSectionVariant;
+}) {
+  const list = safeItems(items);
+  if (variant === "accent") {
+    return (
+      <div className="border-t border-white/6 py-12 md:py-16">
+        <div className="mx-auto max-w-3xl px-5 md:px-8">
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-8 md:p-10">
+            <h2 className="text-lg font-medium text-white md:text-xl">{title || "—"}</h2>
+            <ul className="mt-5 space-y-3 text-sm leading-relaxed text-zinc-300">
+              {list.map((text, i) => (
+                <li key={`${i}-${text.slice(0, 24)}`} className="flex gap-2">
+                  <span className="shrink-0 text-emerald-500/80">✓</span>
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return <ItemGrid title={title} items={list} />;
+}
+
+function renderFlowSection(
+  sec: SoloSection,
+  blocks: SoloBodyBlocks,
+): ReactNode {
+  const { kind, variant } = sec;
+  switch (kind) {
+    case "benefits":
+      return variant === "list" ? (
+        <ItemList title={blocks.whyTitle} items={blocks.whyItems} />
+      ) : (
+        <ItemGrid title={blocks.whyTitle} items={blocks.whyItems} />
+      );
+    case "services":
+      return variant === "list" ? (
+        <ItemList title={blocks.servicesTitle} items={blocks.serviceItems} />
+      ) : (
+        <ItemGrid title={blocks.servicesTitle} items={blocks.serviceItems} />
+      );
+    case "how": {
+      const steps = blocks.howItems ?? [];
+      if (!steps.length) return null;
+      return <StepsSection title={blocks.howTitle ?? "Как работаем"} items={steps} />;
+    }
+    case "reviews": {
+      const rev = blocks.reviewItems ?? [];
+      if (!rev.length) return null;
+      return <ReviewsBlock title={blocks.reviewsTitle ?? "Отзывы"} items={rev} variant={variant} />;
+    }
+    case "trust":
+      return <TrustBlock title={blocks.trustTitle} items={blocks.trustItems} variant={variant} />;
+    default:
+      return null;
+  }
 }
 
 const LEGACY_CARDS: { t: string; d: (city: string) => string }[] = [
@@ -63,8 +219,12 @@ export function FullSiteTemplate({ niche, city, content, projectSlug, className 
   const blocks: SoloBodyBlocks | null =
     content.soloBlocks ?? (SOLO_SITE_GENERATOR_ENABLED ? getLegacyFallbackSoloBodyBlocks(niche, city) : null);
   const fullLayout = blocks != null;
+  const useSectionFlow = Boolean(blocks?.sections?.length && blocks?.layoutId);
 
-  const captureForm = (section: LeadFormSection, opts?: { showHeader?: boolean; submitLabel?: string; formCaption?: string }) => {
+  const captureForm = (
+    section: LeadFormSection,
+    opts?: { showHeader?: boolean; submitLabel?: string; formCaption?: string },
+  ) => {
     if (!projectSlug) {
       if (opts?.showHeader === false) {
         return (
@@ -90,6 +250,29 @@ export function FullSiteTemplate({ niche, city, content, projectSlug, className 
       />
     );
   };
+
+  const finalCtaSection = blocks ? (
+    <section className="section-shell border-t border-white/6 py-12 md:py-16">
+      <div
+        className={cn(
+          "mx-auto max-w-3xl p-8 md:p-10",
+          useSectionFlow ? "rounded-2xl border border-white/14 bg-white/[0.06]" : "surface-card",
+        )}
+      >
+        <h2 className="text-lg font-medium text-white md:text-xl">{blocks.finalCtaTitle ?? ""}</h2>
+        {blocks.finalCtaMicro ? (
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">{blocks.finalCtaMicro}</p>
+        ) : null}
+        <div className="mt-6">
+          {captureForm("final_cta", {
+            showHeader: false,
+            submitLabel: blocks.finalCtaButton ?? "Оставить заявку",
+            formCaption: "",
+          })}
+        </div>
+      </div>
+    </section>
+  ) : null;
 
   return (
     <div
@@ -127,34 +310,42 @@ export function FullSiteTemplate({ niche, city, content, projectSlug, className 
         </section>
 
         {fullLayout && blocks ? (
-          <>
-            <ItemGrid title={blocks.whyTitle} items={blocks.whyItems} />
-            <ItemGrid title={blocks.servicesTitle} items={blocks.serviceItems} />
-            <ItemGrid title={blocks.trustTitle} items={blocks.trustItems} />
+          useSectionFlow ? (
+            <>
+              {blocks.sections!.map((sec, idx) => {
+                if (sec.kind === "final_cta") {
+                  return (
+                    <Fragment key={`flow-${idx}-cta`}>
+                      <section className="section-shell border-t border-white/6 py-12 md:py-16">
+                        <div className="surface-card mx-auto max-w-3xl p-8 md:p-10">
+                          <p className="text-xs font-medium tracking-[0.2em] text-zinc-500">ЗАЯВКА</p>
+                          {captureForm("capture")}
+                        </div>
+                      </section>
+                      {finalCtaSection}
+                    </Fragment>
+                  );
+                }
+                const node = renderFlowSection(sec, blocks);
+                return node ? <Fragment key={`flow-${idx}-${sec.kind}`}>{node}</Fragment> : null;
+              })}
+            </>
+          ) : (
+            <>
+              <ItemGrid title={blocks.whyTitle ?? ""} items={blocks.whyItems ?? []} />
+              <ItemGrid title={blocks.servicesTitle ?? ""} items={blocks.serviceItems ?? []} />
+              <ItemGrid title={blocks.trustTitle ?? ""} items={blocks.trustItems ?? []} />
 
-            <section className="section-shell border-t border-white/6 py-12 md:py-16">
-              <div className="surface-card mx-auto max-w-3xl p-8 md:p-10">
-                <p className="text-xs font-medium tracking-[0.2em] text-zinc-500">ЗАЯВКА</p>
-                {captureForm("capture")}
-              </div>
-            </section>
-
-            <section className="section-shell border-t border-white/6 py-12 md:py-16">
-              <div className="surface-card mx-auto max-w-3xl p-8 md:p-10">
-                <h2 className="text-lg font-medium text-white md:text-xl">{blocks.finalCtaTitle}</h2>
-                {blocks.finalCtaMicro ? (
-                  <p className="mt-3 text-sm leading-relaxed text-zinc-400">{blocks.finalCtaMicro}</p>
-                ) : null}
-                <div className="mt-6">
-                  {captureForm("final_cta", {
-                    showHeader: false,
-                    submitLabel: blocks.finalCtaButton,
-                    formCaption: "",
-                  })}
+              <section className="section-shell border-t border-white/6 py-12 md:py-16">
+                <div className="surface-card mx-auto max-w-3xl p-8 md:p-10">
+                  <p className="text-xs font-medium tracking-[0.2em] text-zinc-500">ЗАЯВКА</p>
+                  {captureForm("capture")}
                 </div>
-              </div>
-            </section>
-          </>
+              </section>
+
+              {finalCtaSection}
+            </>
+          )
         ) : (
           <section className="section-shell border-t border-white/6 py-12 md:py-16">
             <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-3">
@@ -171,7 +362,9 @@ export function FullSiteTemplate({ niche, city, content, projectSlug, className 
         <footer className="border-t border-white/8 py-10">
           <div className="section-shell text-center text-sm text-zinc-500">
             <p>{content.contacts}</p>
-            {fullLayout && blocks ? <p className="mt-2 text-xs text-zinc-600">{blocks.footerKicker}</p> : null}
+            {fullLayout && blocks?.footerKicker ? (
+              <p className="mt-2 text-xs text-zinc-600">{blocks.footerKicker}</p>
+            ) : null}
             <p className="mt-2 text-xs text-zinc-600">Демо-превью · сгенерировано автоматически</p>
           </div>
         </footer>
