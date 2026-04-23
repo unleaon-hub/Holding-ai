@@ -1,4 +1,7 @@
 import type { LeadStatus } from "@/data/cabinet/types";
+import { isTrialActive } from "@/lib/billing";
+import { notify } from "@/lib/notifiers";
+import { pushNotification } from "@/lib/notifications";
 import { persistLeads, readLeadsState, subscribeLeadsChanged } from "./storage";
 import type { CreateLeadInput, StoredLead } from "./types";
 
@@ -46,6 +49,27 @@ export function createLead(projectSlug: string, input: CreateLeadInput): { ok: t
   };
   const next = [...s.leads, lead];
   persistLeads(next);
+  const trialEnded = !isTrialActive();
+  pushNotification({
+    type: "new_lead",
+    title: "Новая заявка",
+    message: trialEnded
+      ? "Новая заявка получена. Откройте доступ, чтобы увидеть контакт клиента"
+      : "С сайта поступила новая заявка",
+    projectSlug: lead.projectSlug,
+  });
+  const leadEvent = {
+    type: "new_lead",
+    projectSlug: lead.projectSlug,
+    leadId: lead.id,
+    name: lead.name,
+    contact: lead.phoneOrContact,
+    message: lead.message ?? "",
+    createdAt: lead.createdAt,
+  } as const;
+  void notify(leadEvent).catch((error) => {
+    console.error("[notifier] unexpected notify failure", error);
+  });
   return { ok: true, lead };
 }
 

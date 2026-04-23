@@ -9,19 +9,40 @@ import Link from "next/link";
 type LeadCardProps = {
   lead: LeadRow;
   live?: boolean;
+  isNew?: boolean;
+  contactsLocked?: boolean;
+  statusLocked?: boolean;
   onStatusChange?: (leadId: string, next: LeadStatus) => void;
 };
 
-export function LeadCard({ lead, live, onStatusChange }: LeadCardProps) {
-  const href = getContactActionHref(lead.phone);
+export function LeadCard({
+  lead,
+  live,
+  isNew = false,
+  contactsLocked = false,
+  statusLocked = false,
+  onStatusChange,
+}: LeadCardProps) {
+  const href = contactsLocked ? null : getContactActionHref(lead.phone);
   return (
     <Reveal>
-      <article className="surface-card p-4">
+      <article className={`surface-card p-4 ${isNew ? "border-emerald-400/20 bg-emerald-500/[0.03]" : ""}`}>
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-sm font-medium text-white">{lead.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-white">{lead.name}</p>
+              {isNew ? (
+                <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200">
+                  Новая заявка
+                </span>
+              ) : null}
+            </div>
             <p className="mt-1 text-sm text-zinc-500">
-              {href ? (
+              {contactsLocked ? (
+                <Link href="/upgrade" className="text-zinc-300 underline decoration-white/20 underline-offset-2">
+                  🔒 Контакт скрыт • Откройте доступ
+                </Link>
+              ) : href ? (
                 <a
                   href={href}
                   className="text-zinc-300 underline decoration-white/20 underline-offset-2"
@@ -83,9 +104,15 @@ export function LeadCard({ lead, live, onStatusChange }: LeadCardProps) {
               </label>
               <select
                 id={`mst-${lead.id}`}
-                className="h-10 w-full min-w-0 flex-1 rounded-lg border border-white/10 bg-[#0d0d0d] px-2 text-sm text-zinc-200"
+                className="h-10 w-full min-w-0 flex-1 rounded-lg border border-white/10 bg-[#0d0d0d] px-2 text-sm text-zinc-200 disabled:cursor-not-allowed disabled:text-zinc-500"
                 value={lead.status}
-                onChange={(e) => onStatusChange(lead.id, e.target.value as LeadStatus)}
+                onChange={(e) => {
+                  if (statusLocked) {
+                    return;
+                  }
+                  onStatusChange(lead.id, e.target.value as LeadStatus);
+                }}
+                disabled={statusLocked}
               >
                 {leadStatusOrder.map((s) => (
                   <option key={s} value={s}>
@@ -94,6 +121,9 @@ export function LeadCard({ lead, live, onStatusChange }: LeadCardProps) {
                 ))}
               </select>
             </div>
+            {statusLocked ? (
+              <p className="text-xs text-zinc-600">Смена статуса доступна после разблокировки.</p>
+            ) : null}
           </div>
         ) : (
           <div className="mt-4 flex flex-wrap gap-2">

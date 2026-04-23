@@ -1,5 +1,6 @@
+import { initTrialIfNeeded } from "@/lib/billing";
 import { resolveSoloFormToProjectFields } from "@/lib/solo-site";
-import { ensureEditableContent } from "./default-content";
+import { buildDefaultContent, ensureEditableContent } from "./default-content";
 import type { EditableContent, GeneratedProject, ProjectOwner, SiteSessionV1 } from "./types";
 
 // TODO: sync с backend; ключ и версия — миграции при смене схемы
@@ -16,6 +17,59 @@ function makeProjectSlug(): string {
 
 export { buildDefaultContent } from "./default-content";
 
+function coerceOwner(raw: unknown): ProjectOwner | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  const name = typeof o.name === "string" ? o.name.trim() : "";
+  const email = typeof o.email === "string" ? o.email.trim() : "";
+  if (!name || !email) {
+    return null;
+  }
+  return { name, email };
+}
+
+/**
+ * Битый JSON/localStorage не должен валить UI: отбрасываем проект без обязательных полей.
+ */
+function coerceGeneratedProject(raw: unknown): GeneratedProject | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const r = raw as Record<string, unknown>;
+  const id = typeof r.id === "string" && r.id.trim() ? r.id.trim() : null;
+  const slug = typeof r.slug === "string" && r.slug.trim() ? r.slug.trim() : null;
+  if (!id || !slug) {
+    return null;
+  }
+  const niche = typeof r.niche === "string" ? r.niche : "";
+  const city = typeof r.city === "string" ? r.city : "";
+  const contact = typeof r.contact === "string" ? r.contact : "";
+  const createdAt =
+    typeof r.createdAt === "string" && Number.isFinite(Date.parse(r.createdAt))
+      ? r.createdAt
+      : new Date().toISOString();
+  const registered = r.registered === true;
+  const contentRaw = r.content != null && typeof r.content === "object" ? r.content : {};
+  const content = ensureEditableContent(contentRaw as EditableContent);
+  const ownerName = typeof r.ownerName === "string" ? r.ownerName : undefined;
+  const ownerEmail = typeof r.ownerEmail === "string" ? r.ownerEmail : undefined;
+
+  return {
+    id,
+    slug,
+    niche,
+    city,
+    contact,
+    createdAt,
+    registered,
+    content,
+    ownerName,
+    ownerEmail,
+  };
+}
+
 function readState(): SiteSessionV1 {
   if (!isBrowser()) {
     return { version: 1, project: null, owner: null };
@@ -25,12 +79,15 @@ function readState(): SiteSessionV1 {
     if (!raw) {
       return { version: 1, project: null, owner: null };
     }
-    const data = JSON.parse(raw) as SiteSessionV1;
-    if (data?.version === 1 && (data.project === null || typeof data.project === "object")) {
+    const data = JSON.parse(raw) as Partial<SiteSessionV1>;
+    if (data?.version === 1) {
+      const project =
+        data.project === null ? null : data.project === undefined ? null : coerceGeneratedProject(data.project);
+      const owner = coerceOwner(data.owner);
       return {
         version: 1,
-        project: data.project,
-        owner: data.owner ?? null,
+        project,
+        owner,
       };
     }
   } catch {
@@ -66,16 +123,31 @@ export function createProjectFromForm(input: {
   city: string;
   contact: string;
 }): string {
+  // Trial стартует только один раз и не перезапускается.
+  initTrialIfNeeded();
   const id = isBrowser() && "crypto" in globalThis && "randomUUID" in globalThis.crypto
     ? globalThis.crypto.randomUUID()
     : `proj-${Date.now()}`;
 
   const slug = makeProjectSlug();
-  const resolved = resolveSoloFormToProjectFields({
-    niche: input.niche,
-    city: input.city,
-    contact: input.contact,
-  });
+  let resolved;
+  try {
+    resolved = resolveSoloFormToProjectFields({
+      niche: input.niche,
+      city: input.city,
+      contact: input.contact,
+    });
+  } catch (e) {
+    console.warn("[site-session] resolveSoloFormToProjectFields failed, using default content", e);
+    const niche = input.niche.trim() || "Ниша";
+    const city = input.city.trim() || "Город";
+    resolved = {
+      niche,
+      city,
+      contact: input.contact.trim(),
+      content: buildDefaultContent(niche, city),
+    };
+  }
 
   const project: GeneratedProject = {
     id,
@@ -106,7 +178,8 @@ export function getProject(): GeneratedProject | null {
 
 export function getProjectBySlug(slug: string): GeneratedProject | null {
   const p = getProject();
-  if (!p || p.slug !== slug) {
+  const t = typeof slug === "string" ? slug.trim() : "";
+  if (!p || !t || p.slug !== t) {
     return null;
   }
   return p;

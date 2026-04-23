@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getProject, isRegistered, setUser } from "@/lib/site-session";
@@ -27,7 +27,7 @@ export function ClaimPageInner() {
     "контроль над потоком клиентов",
   ];
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!getProject()) {
       setNoProject(true);
     }

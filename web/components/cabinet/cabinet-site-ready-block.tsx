@@ -22,7 +22,7 @@ export function CabinetSiteReadyBlock({ className }: { className?: string }) {
       </p>
       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
         <Link
-          href={`/preview/${project.slug}`}
+          href={`/preview/${encodeURIComponent(project.slug)}`}
           className="inline-flex items-center justify-center rounded-full border border-white/18 bg-white/8 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/14"
         >
           Открыть сайт

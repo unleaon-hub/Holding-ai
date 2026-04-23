@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell } from "lucide-react";
-import { cabinetProjectContext } from "@/data/cabinet";
+import { getTrialDaysLeft, isTrialActive } from "@/lib/billing";
+import { getLeads, subscribeLeadsChanged } from "@/lib/lead-storage";
 import { useCabinetProject } from "./cabinet-project-provider";
 import { cn } from "@/lib/utils";
 
@@ -15,11 +17,29 @@ type CabinetHeaderProps = {
  */
 export function CabinetHeader({ className }: CabinetHeaderProps) {
   const { project } = useCabinetProject();
-  const { planLabel, daysUntilCharge, nextChargeDate } = cabinetProjectContext;
+  const [, bump] = useState(0);
+  const refresh = useCallback(() => {
+    bump((x) => x + 1);
+  }, []);
+  useEffect(() => {
+    return subscribeLeadsChanged(refresh);
+  }, [refresh]);
+
+  const leadCount = useMemo(
+    () => (project ? getLeads(project.slug).length : 0),
+    [project, bump],
+  );
+  const trialActive = isTrialActive();
+  const trialDaysLeft = getTrialDaysLeft();
   const projectName =
     project != null
       ? `${project.niche} — ${project.city}`
-      : cabinetProjectContext.projectName;
+      : "Проект";
+  const trialLabel = trialActive
+    ? `Пробный период: ${trialDaysLeft} дн. осталось`
+    : leadCount > 0
+      ? `Пробный период закончился • ${leadCount} заявок`
+      : "Пробный период закончился";
 
   return (
     <header
@@ -37,14 +57,9 @@ export function CabinetHeader({ className }: CabinetHeaderProps) {
           <Link
             href="/cabinet/payment"
             className="surface-subtle flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-white/10 px-3 py-1.5 text-sm text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.04]"
-            aria-label="Оплата и подписка: тариф и дата списания"
+            aria-label="Статус пробного периода и доступ к тарифу"
           >
-            <span className="text-zinc-500">Тариф</span>
-            <span className="font-medium text-white">{planLabel}</span>
-            <span className="text-zinc-500">·</span>
-            <span className="text-zinc-500">списание</span>
-            <span className="font-medium text-white">через {daysUntilCharge} дн.</span>
-            <span className="text-zinc-500">{nextChargeDate}</span>
+            <span className="font-medium text-white">{trialLabel}</span>
           </Link>
           <button
             type="button"

@@ -28,6 +28,7 @@ function StartPageInner() {
   const [stage, setStage] = useState<Stage>("form");
   const [secondsLeft, setSecondsLeft] = useState(60);
   const [activeStep, setActiveStep] = useState(0);
+  const [genError, setGenError] = useState<string | null>(null);
   const [niche, setNiche] = useState(presetBusiness);
   const [geo, setGeo] = useState("");
   const [contact, setContact] = useState("");
@@ -46,6 +47,7 @@ function StartPageInner() {
   }, []);
 
   const startGeneration = () => {
+    setGenError(null);
     setStage("loading");
     setSecondsLeft(60);
     setActiveStep(0);
@@ -72,12 +74,25 @@ function StartPageInner() {
             window.clearInterval(stepRef.current);
             stepRef.current = undefined;
           }
-          const slug = createProjectFromForm({
-            niche: nicheTrim,
-            city: geoTrim,
-            contact: contactTrim,
-          });
-          router.replace(`/preview/${slug}`);
+          let slug: string;
+          try {
+            slug = createProjectFromForm({
+              niche: nicheTrim,
+              city: geoTrim,
+              contact: contactTrim,
+            });
+          } catch (e) {
+            console.warn("[/start] createProjectFromForm failed", e);
+            setStage("form");
+            setGenError("Не удалось сохранить проект в этом браузере. Проверьте доступ к памяти и попробуйте снова.");
+            return 0;
+          }
+          if (!slug?.trim()) {
+            setStage("form");
+            setGenError("Проект не создан — попробуйте отправить форму ещё раз.");
+            return 0;
+          }
+          router.replace(`/preview/${encodeURIComponent(slug.trim())}`);
           return 0;
         }
         return prev - 1;
@@ -106,6 +121,11 @@ function StartPageInner() {
           <h1 className="mt-4 text-4xl font-light text-white md:text-5xl">
             Запуск AI Site Engine
           </h1>
+          {genError ? (
+            <p className="mt-4 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100/90">
+              {genError}
+            </p>
+          ) : null}
           <form
             className="mt-8 space-y-4"
             onSubmit={(event) => {

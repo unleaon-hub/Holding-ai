@@ -8,10 +8,20 @@ import Link from "next/link";
 type LeadsTableProps = {
   rows: LeadRow[];
   live?: boolean;
+  newestLeadIds?: ReadonlySet<string>;
+  contactsLocked?: boolean;
+  statusLocked?: boolean;
   onStatusChange?: (leadId: string, next: LeadStatus) => void;
 };
 
-export function LeadsTable({ rows, live, onStatusChange }: LeadsTableProps) {
+export function LeadsTable({
+  rows,
+  live,
+  newestLeadIds,
+  contactsLocked = false,
+  statusLocked = false,
+  onStatusChange,
+}: LeadsTableProps) {
   return (
     <div className="hidden md:block">
       <div className="overflow-x-auto rounded-xl border border-white/8">
@@ -29,15 +39,29 @@ export function LeadsTable({ rows, live, onStatusChange }: LeadsTableProps) {
           </thead>
           <tbody>
             {rows.map((row) => {
-              const href = getContactActionHref(row.phone);
+              const href = contactsLocked ? null : getContactActionHref(row.phone);
+              const isNew = newestLeadIds?.has(row.id) ?? false;
               return (
                 <tr
                   key={row.id}
-                  className="border-b border-white/5 transition hover:bg-white/[0.02]"
+                  className={`border-b border-white/5 transition hover:bg-white/[0.02] ${isNew ? "bg-emerald-500/[0.03]" : ""}`}
                 >
-                  <td className="px-4 py-3 text-zinc-200">{row.name}</td>
+                  <td className="px-4 py-3 text-zinc-200">
+                    <div className="inline-flex items-center gap-2">
+                      <span>{row.name}</span>
+                      {isNew ? (
+                        <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200">
+                          Новая заявка
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-zinc-400">
-                    {href ? (
+                    {contactsLocked ? (
+                      <Link href="/upgrade" className="text-zinc-300 underline decoration-white/20 underline-offset-2 hover:decoration-white/40">
+                        🔒 Контакт скрыт • Откройте доступ
+                      </Link>
+                    ) : href ? (
                       <a href={href} className="text-zinc-300 underline decoration-white/20 underline-offset-2 hover:decoration-white/40">
                         {row.phone}
                       </a>
@@ -95,9 +119,15 @@ export function LeadsTable({ rows, live, onStatusChange }: LeadsTableProps) {
                           </label>
                           <select
                             id={`st-${row.id}`}
-                            className="h-7 w-full min-w-0 max-w-[9.5rem] flex-1 cursor-pointer bg-transparent text-left text-xs text-zinc-200"
+                            className="h-7 w-full min-w-0 max-w-[9.5rem] flex-1 bg-transparent text-left text-xs text-zinc-200 disabled:cursor-not-allowed disabled:text-zinc-500"
                             value={row.status}
-                            onChange={(e) => onStatusChange(row.id, e.target.value as LeadStatus)}
+                            onChange={(e) => {
+                              if (statusLocked) {
+                                return;
+                              }
+                              onStatusChange(row.id, e.target.value as LeadStatus);
+                            }}
+                            disabled={statusLocked}
                           >
                             {leadStatusOrder.map((s) => (
                               <option key={s} value={s} className="bg-[#141414] text-zinc-200">
